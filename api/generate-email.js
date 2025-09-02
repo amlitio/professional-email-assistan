@@ -1,4 +1,4 @@
-// api/generate-email.js
+// api/generate-email.js - FIXED VERSION
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -32,6 +32,7 @@ export default async function handler(req, res) {
     }
 
     console.log('Making request to Anthropic API...');
+    console.log('Using model: claude-3-5-sonnet-20241022');
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -41,32 +42,46 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-3-5-sonnet-20241022',  // Fixed: Updated model name
         max_tokens: 1500,
-        messages: [{ role: 'user', content: prompt }]
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
       })
     });
 
     console.log('Anthropic API response status:', response.status);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Anthropic API error:', response.status, response.statusText, errorText);
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('Anthropic API error:', response.status, response.statusText, errorData);
       return res.status(response.status).json({ 
         error: `Anthropic API error: ${response.status} ${response.statusText}`,
-        details: errorText
+        details: errorData
       });
     }
 
     const data = await response.json();
     console.log('Anthropic API success');
+    console.log('Response content type:', data.content?.[0]?.type);
+    
+    if (!data.content || !data.content[0] || !data.content[0].text) {
+      console.error('Unexpected API response structure:', data);
+      return res.status(500).json({ 
+        error: 'Unexpected API response structure',
+        details: data
+      });
+    }
     
     res.status(200).json({ 
       response: data.content[0].text 
     });
 
   } catch (error) {
-    console.error('Server error:', error);
+    console.error('Server error:', error.name, error.message, error.stack);
     res.status(500).json({ 
       error: 'Internal server error',
       details: error.message
