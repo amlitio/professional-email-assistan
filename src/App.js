@@ -184,20 +184,23 @@ EMAIL:
 
 Please respond in ${locale} language.`;
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
+      // Call your backend API instead of Anthropic directly
+      const response = await fetch('/api/generate-email', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1500,
-          messages: [{ role: "user", content: businessPrompt }]
+          prompt: businessPrompt
         })
       });
-      
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
       const data = await response.json();
-      const claudeResponse = data.content[0].text;
+      const claudeResponse = data.response;
       
       // Parse the response to extract subject and email
       const parts = claudeResponse.trim().split('\n\nEMAIL:\n');
